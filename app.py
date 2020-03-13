@@ -7,6 +7,16 @@ import flask
 import numpy as np
 import pandas as pd
 
+# TODO:
+# improve update data function -> remove string check
+# world wide statistics with sunburst
+# country stat with sunburst for states
+# improve inputs
+# select multiple condition
+# add acknowledgement
+# add disclaimer
+#fill na in readcsv, other drop 0 case option
+# remove try with get
 
 
 ##### Process data
@@ -18,6 +28,7 @@ def RawDataParser(file):
     indexWithNoCase = df.index[df[df.columns[-1]] == 0].tolist()
     df = df.drop(df.index[indexWithNoCase])
     df = df.fillna(0)
+    # df = df[df.columns[-1]] /= 0]
 
 
     def parseData(country):
@@ -68,145 +79,149 @@ app.scripts.config.serve_locally = False
 dcc._js_dist[0]['external_url'] = 'https://cdn.plot.ly/plotly-basic-latest.min.js'
 
 app.layout = html.Div([
-    html.Div(children=[
-    html.Label(
-        'COVID-19 visualizer',
-        style={'font-size': '27px', "font-weight":"bold",'float':'left', "margin-right":'75px',"font-family": "sans-serif"}
-    ),
-    html.Label(
-        'Daily stat',
-        style={'font-size': '21px', 'float':'left', 'margin-top':'5px'}
-    ),
-    daq.BooleanSwitch(
-        id = 'dailyToggle',
-        on=False,
-        style={'float':'left', 'margin-top':'7px', "margin-right":'75px',"margin-left":"19px"}
-    ) ,
-    dcc.RadioItems(
-        id='condition',
-        options=[
-            {'label': 'Confirmed', 'value': 'Confirmed'},
-            {'label': "Deaths", 'value': "Deaths"},
-            {'label': "Recovered", 'value': "Recovered"}
-            ],
-        value='Confirmed',
-        style={'font-size': '21px', 'margin-top':'5px', 'margin-bottom':'25px'}
-
-    ),
-    html.Label(
-        'Countries',
-        style={'font-size': '21px', 'margin-right':'21px','float':'left', 'margin-top':'5px'}
-    ),
-    dcc.Dropdown(
-        id='country',
-        options=[
-            {"label":i,"value":i} for i in sorted(sortedData['Confirmed'].keys())
+    html.Div(
+        children=[
+            html.Label(
+                'COVID-19 visualizer',
+                style={'font-size': '27px', "font-weight":"bold",'float':'left', "margin-right":'75px',"font-family": "sans-serif"}
+            ),
+            html.Label(
+                'Daily stat',
+                style={'font-size': '21px', 'float':'left', 'margin-top':'5px'}
+            ),
+            daq.BooleanSwitch(
+                id = 'dailyToggle',
+                on=False,
+                style={'float':'left', 'margin-top':'7px', "margin-right":'75px',"margin-left":"19px"}
+            ) ,
+            dcc.RadioItems(
+                id='condition',
+                options=[
+                    {'label': 'Confirmed', 'value': 'Confirmed'},
+                    {'label': "Deaths", 'value': "Deaths"},
+                    {'label': "Recovered", 'value': "Recovered"}
+                    ],
+                value='Confirmed',
+                style={'font-size': '21px', 'margin-top':'5px', 'margin-bottom':'25px'}
+            ),
+            html.Label(
+                'Countries',
+                style={'font-size': '21px', 'margin-right':'21px','float':'left', 'margin-top':'5px'}
+            ),
+            dcc.Dropdown(
+                id='country',
+                options=[
+                    {"label":i,"value":i} for i in sorted(sortedData['Confirmed'].keys())
+                ],
+                # value=["China"],
+                multi=True ,
+                placeholder ="Select Countries",
+                style={"width":'85%',"margin-bottom":'5px'},
+            ),
         ],
-        # value=["China"],
-        multi=True ,
-        placeholder ="Select Countries",
-        style={"width":'85%',"margin-bottom":'5px'},
+        style={"border":"2px black solid"}
     ),
-    ], style={"border":"2px black solid"}),
-    html.Div(children=[
 
+    html.Div(
+        children=[
+            dcc.Graph(
+                id='piet',
+                style = {"width":"25%",'float':'left'},
+                figure = {
+                    'data': [{
+                        "type": 'pie',
+                        'labels':[],#pieData["Deaths"].keys(),
+                        "values":[],#pieData["Deaths"].values(),
+                        "textposition":'inside', 
+                        'textinfo':'percent+label',
+                        "showlegend": False,
+                    }],
+                    "layout":{
+                        "title":"",
+                        "font":{
+                            "size":"17",
+                            "family":"Times New Roman"
+                        }
+                    }
+                }
+            ),
+            dcc.Graph(
+                id='pie1',
+                style = {"width":"25%",'float':'left'},
+                figure = {
+                    'data': [{
+                        "type": 'pie',
+                        'labels':pieData["Confirmed"].keys(),
+                        "values":pieData["Confirmed"].values(),
+                        "textposition":'inside', 
+                        'textinfo':'percent+label',
+                        "showlegend": False,
+                    }],
+                    "layout":{
+                        "title":"Confirmed",
+                        "font":{
+                            "size":"17",
+                            "family":"Times New Roman"
+                        }
+                    }
+                }
+            ),
+            dcc.Graph(
+                id='pie2',
+                style = {"width":"25%",'float':'left'},
+                figure = {
+                    'data': [{
+                        "type": 'pie',
+                        'labels':pieData["Deaths"].keys(),
+                        "values":pieData["Deaths"].values(),
+                        "textposition":'inside', 
+                        'textinfo':'percent+label',
+                        "showlegend": False,
+                    }],
+                    "layout":{
+                        "title":"Deaths",
+                        "font":{
+                            "size":"17",
+                            "family":"Times New Roman"
+                        }
+                    }
+                }
+            ),
+            dcc.Graph(
+                id='pie3',
+                style = {"width":"25%",'float':'left'},
+                figure = {
+                    'data': [{
+                        "type": 'pie',
+                        'labels':pieData["Recovered"].keys(),
+                        "values":pieData["Recovered"].values(),
+                        "textposition":'inside', 
+                        'textinfo':'percent+label',
+                        "showlegend": False,
+                    }],
+                    "layout":{
+                        "title":"Recovered",
+                        "font":{
+                            "size":"17",
+                            "family":"Times New Roman"
+                        }
+                    }
+                }
+            )
+        ],
+        style={"width":'100%'}),
+        dcc.Graph(id='my-graph',style={"margin-top":'400px'})
+    ]
+)
 
-
-    dcc.Graph(
-        id='piet',
-        style = {"width":"25%",'float':'left'},
-        figure = {
-        'data': [{
-            "type": 'pie',
-            'labels':[],#pieData["Deaths"].keys(),
-            "values":[],#pieData["Deaths"].values(),
-            "textposition":'inside', 
-            'textinfo':'percent+label',
-            "showlegend": False,
-         }],
-         "layout":{
-             "title":"",
-             "font":{
-                 "size":"17",
-                 "family":"Times New Roman"
-             }
-         }
-    }
-    ),
-    dcc.Graph(
-        id='pie1',
-        style = {"width":"25%",'float':'left'},
-        figure = {
-        'data': [{
-            "type": 'pie',
-            'labels':pieData["Confirmed"].keys(),
-            "values":pieData["Confirmed"].values(),
-            "textposition":'inside', 
-            'textinfo':'percent+label',
-            "showlegend": False,
-         }],
-         "layout":{
-             "title":"Confirmed",
-             "font":{
-                 "size":"17",
-                 "family":"Times New Roman"
-             }
-         }
-    }),
-    dcc.Graph(
-        id='pie2',
-        style = {"width":"25%",'float':'left'},
-        figure = {
-        'data': [{
-            "type": 'pie',
-            'labels':pieData["Deaths"].keys(),
-            "values":pieData["Deaths"].values(),
-            "textposition":'inside', 
-            'textinfo':'percent+label',
-            "showlegend": False,
-         }],
-         "layout":{
-             "title":"Deaths",
-             "font":{
-                 "size":"17",
-                 "family":"Times New Roman"
-             }
-         }
-    }
-    ),
-    dcc.Graph(
-        id='pie3',
-        style = {"width":"25%",'float':'left'},
-        figure = {
-        'data': [{
-            "type": 'pie',
-            'labels':pieData["Recovered"].keys(),
-            "values":pieData["Recovered"].values(),
-            "textposition":'inside', 
-            'textinfo':'percent+label',
-            "showlegend": False,
-         }],
-         "layout":{
-             "title":"Recovered",
-             "font":{
-                 "size":"17",
-                 "family":"Times New Roman"
-             }
-         }
-    }
-    )],
-    style={"width":'100%'}),
-    dcc.Graph(id='my-graph',style={"margin-top":'400px'})
-])
-
-
+#updates the country list
 @app.callback( Output('country', 'options'),
             [Input('condition', 'value')])
 def countries(cond):
     return [{"label":i,"value":i} for i in sortedData[cond].keys()]
 
 
-
+#updates the plot
 @app.callback([Output('my-graph', 'figure'), Output('piet', 'figure')],
               [Input('country', 'value'),
               Input('dailyToggle', 'on'),
@@ -264,8 +279,8 @@ def update_graph(value, dail, cond):
         pie = {
             'data': [{
                 "type": 'pie',
-                'labels':["Suffering","Deaths","Recovered"],#pieData["Deaths"].keys(),
-                "values":pieDataSelf[country],#pieData["Deaths"].values(),
+                'labels':["Suffering","Deaths","Recovered"],
+                "values":pieDataSelf[country],
                 "textposition":'inside', 
                 'textinfo':'percent+label',
                 "showlegend": False,
@@ -287,9 +302,9 @@ def update_graph(value, dail, cond):
         'data': data,
         'layout': {
             "title":cond,
-             "font":{
-                 "size":"17",
-                 "family":"Times New Roman"
+            "font":{
+                "size":"17",
+                "family":"Times New Roman"
              }}
     }
 
