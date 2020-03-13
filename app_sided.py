@@ -71,6 +71,8 @@ app.scripts.config.serve_locally = False
 dcc._js_dist[0]['external_url'] = 'https://cdn.plot.ly/plotly-basic-latest.min.js'
 
 app.layout = html.Div([
+    html.Div([
+
     html.Div(
         children=[
             html.Label(
@@ -105,10 +107,10 @@ app.layout = html.Div([
                 options=[
                     {"label":i,"value":i} for i in sorted(sortedData['Confirmed'].keys())
                 ],
-                value=[np.random.choice(sortedData['Confirmed'].keys())],
+                value=["China"],
                 multi=True ,
                 placeholder ="Select Countries",
-                style={"width":'90%',"margin-bottom":'5px'},
+                style={"width":'85%',"margin-bottom":'5px'},
             ),
         ],
         style={"border":"2px black solid"}
@@ -118,7 +120,7 @@ app.layout = html.Div([
         children=[
             dcc.Graph(
                 id='piet',
-                style = {"width":"25%",'float':'left',"height":"350px"},
+                style = {"width":"50%","height":"350px"},
                 figure = {
                     'data': [{
                         "type": 'pie',
@@ -138,9 +140,22 @@ app.layout = html.Div([
                 },
                 config={"displayModeBar":False}
             ),
+        ],
+        style={"width":'100%'}
+    ),
+    dcc.Graph(id='my-graph',animate=True),
+    ],
+    style={"width": "100%","float": "left","box-sizing": "border-box","width":"67%"}
+),
+
+    html.Div(
+        children=[
+            html.Label(
+                'World Statistics',
+                style={'font-size': '27px', "font-weight":"bold", "margin-right":'75px',"font-family": "sans-serif","text-align":"center"}
+            ),
             dcc.Graph(
-                id='pie1',
-                style = {"width":"25%",'float':'left',"height":"350px"},
+                style = {"height":"350px"},
                 figure = {
                     'data': [{
                         "type": 'pie',
@@ -161,8 +176,7 @@ app.layout = html.Div([
                 config={"displayModeBar":False}
             ),
             dcc.Graph(
-                id='pie2',
-                style = {"width":"25%",'float':'left',"height":"350px"},
+                style = {"height":"350px"},
                 figure = {
                     'data': [{
                         "type": 'pie',
@@ -184,8 +198,7 @@ app.layout = html.Div([
                 config={"displayModeBar":False}
             ),
             dcc.Graph(
-                id='pie3',
-                style = {"width":"25%",'float':'left',"height":"350px"},
+                style = {"height":"350px"},
                 figure = {
                     'data': [{
                         "type": 'pie',
@@ -207,11 +220,13 @@ app.layout = html.Div([
                 config={"displayModeBar":False}
             )
         ],
-        style={"width":'100%'}
+        style={"border":"2px black solid","width": "100%","float": "left","box-sizing": "border-box","width":"32%","margin-left":'3px'}
     ),
-    dcc.Graph(id='my-graph',style={"margin-top":'300px'},animate=True),
-    ]
-)
+
+
+
+
+])
 
 #updates the country list
 @app.callback( Output('country', 'options'),
@@ -228,7 +243,7 @@ def countries(cond):
               Input('condition', 'value')])
 def update_graph(value, dail, cond):
     data = []
-    print(value, dail, cond, flask.request.environ['REMOTE_ADDR'])
+    print(value, dail, cond)
     indd = 1 if dail else 0
 
 

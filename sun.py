@@ -6,36 +6,51 @@ import dash_daq as daq
 import flask
 import numpy as np
 import pandas as pd
+import json
 
-# TODO:
-# improve update data function -> remove string check
-# world wide statistics with sunburst
-# country stat with sunburst for states
-# improve inputs
-# select multiple condition
-# add acknowledgement
-# add disclaimer
-
-
-##### Process data
+def parseData(dfc):
+    total = dfc.sum(axis=0)[4:].values
+    diff = np.append(total[0], np.diff(total))
+    return np.vstack([total,diff])
 
 def RawDataParser(file):
     global timeline  #???
     df = pd.read_csv(file)
+
     # drop countries/regions with 0 cases
-    indexWithNoCase = df.index[df[df.columns[-1]] == 0].tolist()
-    df = df.drop(df.index[indexWithNoCase])
     df = df.fillna(0)
-    # df = df[df.columns[-1]] /= 0]
+    df = df[df[df.columns[-1]] != 0]
+    timeline = pd.to_datetime(df.columns[4:], format='%m/%d/%y')
+    fullData = {}
+
+    for country in df["Country/Region"].unique():
+        dfc = df[df['Country/Region'] == country]
+        fullData[country] ={
+            'data' : parseData(dfc),
+            "states":None         # later states dic store same for the states
+        } 
+        if dfc.shape[0] !=1 : # states provided, modify the state key
+            states = dfc['Province/State'].unique()
+            fullData[country]["states"] = {
+                state : parseData(dfc[dfc['Province/State'] == state]) for state in states
+            }
+    return fullData
 
 
-    def parseData(country):
-        total = df[df['Country/Region']==country].sum(axis=0)[4:].values
-        diff = np.append(total[0], np.diff(total))
-        return np.vstack([total,diff])
+def dicToSunBurst(dic):
+    labels, parents, values = [], [], []
+    for k,v in dic.items():
+        labels.append(k)
+        parents.append(' ')
+        values.append(v["data"][0,-1])
+        if v["states"]:
+            for ks,vs in v["states"].items():
+                if ks==k: ks=ks+' '
+                labels.append(ks)
+                parents.append(k)
+                values.append(vs[0,-1])
+    return labels, parents, values
 
-    timeline = pd.to_datetime(df.columns[4:], format='%m/%d/%y')# every data has same timeline
-    return {country : parseData(country) for country in df['Country/Region'].unique()}
 
 
 sortedData = {
@@ -43,15 +58,11 @@ sortedData = {
     "Deaths":RawDataParser('./time_series_19-covid-Deaths.csv'),
     "Recovered":RawDataParser('./time_series_19-covid-Recovered.csv')
 }
-
-
 pieData={
-    "Confirmed" : {k: v[0,-1] for k,v in sortedData["Confirmed"].items()},
-    "Deaths": {k: v[0,-1] for k,v in sortedData["Deaths"].items()},
-    "Recovered": {k: v[0,-1] for k,v in sortedData["Recovered"].items()}
+    "Confirmed" : {k: v["data"][0,-1] for k,v in sortedData["Confirmed"].items()},
+    "Deaths": {k: v["data"][0,-1] for k,v in sortedData["Deaths"].items()},
+    "Recovered": {k: v["data"][0,-1] for k,v in sortedData["Recovered"].items()}
 }
-
-
 pieDataSelf = {}
 for country in pieData["Confirmed"].keys():
     con = pieData["Confirmed"].get(country,0)
@@ -60,6 +71,13 @@ for country in pieData["Confirmed"].keys():
     suf = con - (dea+rec)
     pieDataSelf[country] = [suf,dea,rec]
 
+
+lab, par, val = dicToSunBurst(sortedData["Confirmed"])
+
+for i,j,k in zip(lab,par,val):
+    if (i=="France" or j=="France"):
+        print i,j,k
+# print lab,par,val
 
 
 # The GUI and server
@@ -86,14 +104,14 @@ app.layout = html.Div([
                 on=False,
                 style={'float':'left', 'margin-top':'7px', "margin-right":'75px',"margin-left":"19px"}
             ) ,
-            dcc.Checklist(
+            dcc.RadioItems(
                 id='condition',
                 options=[
                     {'label': 'Confirmed', 'value': 'Confirmed'},
                     {'label': "Deaths", 'value': "Deaths"},
                     {'label': "Recovered", 'value': "Recovered"}
                     ],
-                value=['Confirmed'],
+                value='Confirmed',
                 style={'font-size': '21px', 'margin-top':'5px', 'margin-bottom':'25px'}
             ),
             html.Label(
@@ -108,7 +126,8 @@ app.layout = html.Div([
                 value=[np.random.choice(sortedData['Confirmed'].keys())],
                 multi=True ,
                 placeholder ="Select Countries",
-                style={"width":'90%',"margin-bottom":'5px'},
+                style={"width":'85%',"margin-bottom":'5px'},
+                persistence=False
             ),
         ],
         style={"border":"2px black solid"}
@@ -210,6 +229,28 @@ app.layout = html.Div([
         style={"width":'100%'}
     ),
     dcc.Graph(id='my-graph',style={"margin-top":'300px'},animate=True),
+    dcc.Graph(
+            id='pisun',
+            # style = {"width":"25%",'float':'left'},
+            figure = {
+                'data': [{
+                    "type": 'sunburst',
+                    "labels":lab,# ["India","China","WB","MP","RJ","qq","uu","oo","pp"],
+                    "parents":par,#["","","India","India","India","China","China","China","China"],
+                    "values":val,# [24, 20, 12, 10, 2, 6, 6, 4, 4],
+                        # "textposition":'inside', 
+                        'textinfo':'parcent+label',
+                        "showlegend": False,
+                }],
+                "layout":{
+                    "title":"",
+                    "font":{
+                        "size":"17",
+                        "family":"Times New Roman"
+                    }
+                }
+            },
+        )
     ]
 )
 
@@ -217,8 +258,7 @@ app.layout = html.Div([
 @app.callback( Output('country', 'options'),
             [Input('condition', 'value')])
 def countries(cond):
-    if(len(cond)==0): return [{}] 
-    return [{"label":i,"value":i} for i in sortedData["Confirmed"].keys()]
+    return [{"label":i,"value":i} for i in sortedData[cond].keys()]
 
 
 #updates the plot
@@ -228,14 +268,11 @@ def countries(cond):
               Input('condition', 'value')])
 def update_graph(value, dail, cond):
     data = []
-    print(value, dail, cond, flask.request.environ['REMOTE_ADDR'])
-    indd = 1 if dail else 0
+    print(value, dail, cond)
+    daily = 1 if dail else 0
+    cond = str(cond)
 
-
-    maxVal = [0]
-    legReq = len(cond)>1
-
-    if((value is None) | (len(value)==0) | len(cond)==0):
+    if((value is None) | (len(value)==0)):
         data.append({
             'x': [],
             "mode": "markers+lines",
@@ -246,27 +283,28 @@ def update_graph(value, dail, cond):
             }
         })
     else:
-        for con in cond:
-            print con
-            for country in value:
-                if(country not in sortedData[con].keys()):
-                    data.append({
-                        'x': timeline,
-                        "mode": "markers+lines",
-                        'y': np.zeros_like(timeline),
-                        'name' : '{}({})'.format(country, con),
-                        'line': {'width': 3}
-                    })
-                else:
-                    dff = sortedData[con][country][indd]
-                    maxVal.append(max(dff))
-                    data.append({
-                        'x': timeline,
-                        "mode": "markers+lines",
-                        'y': dff,
-                        'name' : '{}({})'.format(country, con),
-                        'line': {'width': 3}
-                    })
+        for country in value:
+            if(country not in sortedData[cond].keys()):
+                data.append({
+                    'x': timeline,
+                    "mode": "markers+lines",
+                    'y': np.zeros_like(timeline),
+                    'name' : value,
+                    'line': {
+                        'width': 3,
+                    }
+                })
+            else:
+                dff = sortedData[cond][country]["data"][daily]
+                data.append({
+                    'x': timeline,
+                    "mode": "markers+lines",
+                    'y': dff,
+                    'name' : country,
+                    'line': {
+                        'width': 3,
+                    }
+                })
 
         pie = {
             'data': [{
@@ -287,18 +325,13 @@ def update_graph(value, dail, cond):
         }
 
 
-    mm = max(maxVal)
-
     figure =  {
         'data': data,
         'layout': {
-            "title":', '.join(cond),
+            "title":cond,
             "font":{
                 "size":"17",
                 "family":"Times New Roman"
-            },
-            "yaxis":{
-                "range":[0,mm*1.1]
             }
         }
     }
