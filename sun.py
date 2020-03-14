@@ -37,21 +37,6 @@ def RawDataParser(file):
     return fullData
 
 
-def dicToSunBurst(dic):
-    labels, parents, values = [], [], []
-    for k,v in dic.items():
-        labels.append(k)
-        parents.append(' ')
-        values.append(v["data"][0,-1])
-        if v["states"]:
-            for ks,vs in v["states"].items():
-                if ks==k: ks=ks+' '
-                labels.append(ks)
-                parents.append(k)
-                values.append(vs[0,-1])
-    return labels, parents, values
-
-
 
 sortedData = {
     "Confirmed" : RawDataParser('./time_series_19-covid-Confirmed.csv'),
@@ -63,6 +48,7 @@ pieData={
     "Deaths": {k: v["data"][0,-1] for k,v in sortedData["Deaths"].items()},
     "Recovered": {k: v["data"][0,-1] for k,v in sortedData["Recovered"].items()}
 }
+
 pieDataSelf = {}
 for country in pieData["Confirmed"].keys():
     con = pieData["Confirmed"].get(country,0)
@@ -72,12 +58,65 @@ for country in pieData["Confirmed"].keys():
     pieDataSelf[country] = [suf,dea,rec]
 
 
-lab, par, val = dicToSunBurst(sortedData["Confirmed"])
 
-for i,j,k in zip(lab,par,val):
-    if (i=="France" or j=="France"):
-        print i,j,k
-# print lab,par,val
+
+
+def dicToSunBurst(country):
+    labels, parents, values, allDat = [], [], [], {}
+    for con in ["Confirmed","Deaths","Recovered"]:
+        data = sortedData[con][country]
+        allDat[con] ={}
+        for k,v in data["states"].items():
+            allDat[con][k] = v[0,-1]
+
+    allDat['Suffering'] ={}
+    for k,v in allDat["Confirmed"].items():
+        suf = v - (allDat["Deaths"].get(k,0) + allDat["Recovered"].get(k,0) )
+        allDat['Suffering'][k] = suf
+
+    for con in ["Suffering","Deaths","Recovered"]:
+        labels.append(con)
+        parents.append('')
+        values.append(sum(allDat[con].values()))
+        for k,v in allDat[con].items():
+            labels.append(k)
+            parents.append(con)
+            values.append(v)
+    return labels, parents, values
+
+lab, par, val = dicToSunBurst("US")
+# print lab, par, val
+
+
+def getPieOrSun(country):
+    if sortedData["Confirmed"][country]["states"] is None: # return pie
+        dat = [pieData["Confirmed"].get(country,0),
+                pieData["Deaths"].get(country, 0), 
+                pieData["Recovered"].get(country, 0) ]
+        return [{
+                "type": 'pie',
+                'labels':["Suffering","Deaths","Recovered"],
+                "values":dat,
+                "textposition":'inside', 
+                'textinfo':'percent+label',
+                "showlegend": False,
+            }]
+    else:                                                       # return sun burst
+        lab, par, val = dicToSunBurst(country)
+        return [{
+                    "type": 'sunburst',
+                    "labels":lab,# ["India","WB","MP","RJ"],
+                    "parents":par,#["","India","India","India"],
+                    "values":val,#[24, 12, 10, 2],
+                    'textinfo':'label',
+                    'hoverinfo':'label+value+percent entry',
+                    "showlegend": False,
+                }]
+
+
+
+
+
 
 
 # The GUI and server
@@ -123,7 +162,8 @@ app.layout = html.Div([
                 options=[
                     {"label":i,"value":i} for i in sorted(sortedData['Confirmed'].keys())
                 ],
-                value=[np.random.choice(sortedData['Confirmed'].keys())],
+                # value=[np.random.choice(sortedData['Confirmed'].keys())],
+                value=["China"],
                 multi=True ,
                 placeholder ="Select Countries",
                 style={"width":'85%',"margin-bottom":'5px'},
@@ -235,12 +275,12 @@ app.layout = html.Div([
             figure = {
                 'data': [{
                     "type": 'sunburst',
-                    "labels":lab,# ["India","China","WB","MP","RJ","qq","uu","oo","pp"],
-                    "parents":par,#["","","India","India","India","China","China","China","China"],
-                    "values":val,# [24, 20, 12, 10, 2, 6, 6, 4, 4],
-                        # "textposition":'inside', 
-                        'textinfo':'parcent+label',
-                        "showlegend": False,
+                    "labels":lab,# ["India","WB","MP","RJ"],
+                    "parents":par,#["","India","India","India"],
+                    "values":val,#[24, 12, 10, 2],
+                    'textinfo':'label',
+                    'hoverinfo':'label+value+percent entry',
+                    "showlegend": False,
                 }],
                 "layout":{
                     "title":"",
@@ -305,16 +345,8 @@ def update_graph(value, dail, cond):
                         'width': 3,
                     }
                 })
-
         pie = {
-            'data': [{
-                "type": 'pie',
-                'labels':["Suffering","Deaths","Recovered"],
-                "values":pieDataSelf[country],
-                "textposition":'inside', 
-                'textinfo':'percent+label',
-                "showlegend": False,
-            }],
+            'data': getPieOrSun(country),
             "layout":{
                 "title":"<b>"+str(country)+"</b>",
                 "font":{

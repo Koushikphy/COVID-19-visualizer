@@ -111,7 +111,7 @@ app.layout = html.Div([
                 style={"width":'90%',"margin-bottom":'5px'},
             ),
         ],
-        style={"border":"2px black solid"}
+        style={"border":"2px black solid", "margin-bottom":"17px"}
     ),
 
     html.Div(
@@ -155,7 +155,8 @@ app.layout = html.Div([
                         "font":{
                             "size":"17",
                             "family":"Times New Roman"
-                        }
+                        },
+                        "margin":{"l":0,"r":0,"b":50,"t":40},
                     }
                 },
                 config={"displayModeBar":False}
@@ -178,7 +179,8 @@ app.layout = html.Div([
                             "size":"17",
                             "family":"Times New Roman",
                             "color":"red"
-                        }
+                        },
+                        "margin":{"l":0,"r":0,"b":50,"t":40},
                     }
                 },
                 config={"displayModeBar":False}
@@ -201,7 +203,8 @@ app.layout = html.Div([
                             "size":"17",
                             "family":"Times New Roman",
                             "color":"green"
-                        }
+                        },
+                        "margin":{"l":0,"r":0,"b":50,"t":40},
                     }
                 },
                 config={"displayModeBar":False}
@@ -209,7 +212,11 @@ app.layout = html.Div([
         ],
         style={"width":'100%'}
     ),
-    dcc.Graph(id='my-graph',style={"margin-top":'300px'},animate=True),
+    dcc.Graph(id='my-graph',style={"margin-top":'350px'},animate=True),
+        html.Label(
+        'Data Source:',
+        style={}
+    ),
     ]
 )
 
@@ -228,7 +235,7 @@ def countries(cond):
               Input('condition', 'value')])
 def update_graph(value, dail, cond):
     data = []
-    print(value, dail, cond, flask.request.environ['REMOTE_ADDR'])
+    print(value, dail, cond, flask.request.remote_addr)
     indd = 1 if dail else 0
 
 
@@ -282,7 +289,8 @@ def update_graph(value, dail, cond):
                 "font":{
                     "size":"17",
                     "family":"Times New Roman"
-                }
+                },
+            "margin":{"l":0,"r":0,"b":50,"t":40},
             }
         }
 
@@ -292,14 +300,15 @@ def update_graph(value, dail, cond):
     figure =  {
         'data': data,
         'layout': {
-            "title":', '.join(cond),
             "font":{
                 "size":"17",
                 "family":"Times New Roman"
             },
             "yaxis":{
                 "range":[0,mm*1.1]
-            }
+            },
+            "margin":{"l":35,"r":30,"b":25,"t":0},
+            "legend":{"x":0,"y":.9}
         }
     }
 
@@ -308,5 +317,5 @@ def update_graph(value, dail, cond):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
-    # app.run_server(debug='False',port=8080,host='0.0.0.0')
+    # app.run_server(debug=True)
+    app.run_server(debug='False',port=8080,host='0.0.0.0')
