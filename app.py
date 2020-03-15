@@ -212,11 +212,7 @@ app.layout = html.Div([
         ],
         style={"width":'100%'}
     ),
-    dcc.Graph(id='my-graph',style={"margin-top":'350px'},animate=True),
-        html.Label(
-        'Data Source:',
-        style={}
-    ),
+    dcc.Graph(id='my-graph',style={"margin-top":'350px'},animate=True)
     ]
 )
 
