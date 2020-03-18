@@ -234,9 +234,7 @@ def update_graph(value, dail, cond):
     print(value, dail, cond, flask.request.remote_addr)
     indd = 1 if dail else 0
 
-
     maxVal = [0]
-    legReq = len(cond)>1
 
     if((value is None) | (len(value)==0) | len(cond)==0):
         data.append({
@@ -250,7 +248,6 @@ def update_graph(value, dail, cond):
         })
     else:
         for con in cond:
-            print con
             for country in value:
                 if(country not in sortedData[con].keys()):
                     data.append({
